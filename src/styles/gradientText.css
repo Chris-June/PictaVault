@@ -1,0 +1,152 @@
+/* Gradient text animation */
+.gradient-text {
+  background: linear-gradient(
+    300deg,
+    #ff6b6b,
+    #4ecdc4,
+    #45b7d1,
+    #a06cd5,
+    #ff6b6b
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 15s ease infinite;
+}
+
+.gradient-text-fast {
+  background: linear-gradient(
+    300deg,
+    #ff6b6b,
+    #4ecdc4,
+    #45b7d1,
+    #a06cd5,
+    #ff6b6b
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes sparkle-pulse {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+.sparkle-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: sparkle-pulse 3s ease-in-out infinite;
+}
+
+.sparkle-icon svg {
+  fill: url(#gradient-fill);
+  width: 1em;
+  height: 1em;
+}
+
+.sparkle-gradient {
+  position: absolute;
+  background: linear-gradient(
+    45deg,
+    #7928CA,
+    #FF0080,
+    #7928CA,
+    #FF0080
+  );
+  background-size: 200% 200%;
+  animation: gradient-shift 3s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes icon-glow {
+  0% {
+    filter: drop-shadow(0 0 2px rgba(121, 40, 202, 0.3))
+           drop-shadow(0 0 4px rgba(255, 0, 128, 0.2));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(121, 40, 202, 0.5))
+           drop-shadow(0 0 8px rgba(255, 0, 128, 0.4));
+    transform: scale(1.05);
+  }
+  100% {
+    filter: drop-shadow(0 0 2px rgba(121, 40, 202, 0.3))
+           drop-shadow(0 0 4px rgba(255, 0, 128, 0.2));
+    transform: scale(1);
+  }
+}
+
+.feature-icon {
+  animation: icon-glow 3s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.feature-icon svg {
+  width: 36px;
+  height: 36px;
+  stroke: url(#gradient-fill);
+  stroke-width: 2;
+}
+
+.feature-icon:hover {
+  animation-play-state: paused;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(121, 40, 202, 0.6))
+         drop-shadow(0 0 12px rgba(255, 0, 128, 0.5));
+}
+
+/* Hover effect */
+.gradient-text:hover,
+.gradient-text-fast:hover {
+  animation-play-state: paused;
+}
+
+/* Font weight adjustments for better gradient visibility */
+h1.gradient-text,
+h1.gradient-text-fast {
+  font-weight: 700;
+}
+
+h2.gradient-text,
+h2.gradient-text-fast {
+  font-weight: 600;
+}
+
+h3.gradient-text,
+h3.gradient-text-fast,
+h4.gradient-text,
+h4.gradient-text-fast {
+  font-weight: 500;
+}
