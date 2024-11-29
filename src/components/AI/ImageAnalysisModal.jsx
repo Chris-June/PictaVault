@@ -4,7 +4,6 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalBody,
   ModalCloseButton,
   VStack,
   Text,
@@ -22,12 +21,16 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  SimpleGrid,
+  HStack,
 } from '@chakra-ui/react';
 import { 
   analyzeImage, 
   generateImageTags, 
   generateImageCaption,
   suggestCollections,
+  findSimilarImages,
+  generateAIArt,
 } from '../../services/ai';
 
 const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
@@ -37,6 +40,9 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
   const [tags, setTags] = useState([]);
   const [caption, setCaption] = useState('');
   const [collections, setCollections] = useState([]);
+  const [similarImages, setSimilarImages] = useState([]);
+  const [aiArtUrl, setAiArtUrl] = useState(null);
+  const [generatingArt, setGeneratingArt] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -49,6 +55,8 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
       setTags([]);
       setCaption('');
       setCollections([]);
+      setSimilarImages([]);
+      setAiArtUrl(null);
     }
   }, [isOpen, imageUrl]);
 
@@ -67,6 +75,12 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
       setTags(tagsResult);
       setCaption(captionResult);
       setCollections(collectionsResult);
+
+      // Only fetch similar images if we have an imageId
+      if (imageId) {
+        const similarResult = await findSimilarImages(imageId);
+        setSimilarImages(similarResult);
+      }
     } catch (error) {
       console.error('Error in image analysis:', error);
       setError(error.message);
@@ -84,6 +98,31 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
 
   const handleRetry = () => {
     analyzeImageData();
+  };
+
+  const handleGenerateArt = async () => {
+    if (generatingArt) return;
+    
+    setGeneratingArt(true);
+    try {
+      const artUrl = await generateAIArt(imageUrl);
+      setAiArtUrl(artUrl);
+      toast({
+        title: 'AI Art Generated',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error generating AI art:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate AI art',
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setGeneratingArt(false);
+    }
   };
 
   return (
@@ -118,9 +157,35 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
               </Box>
               
               <Box>
-                <Text fontWeight="bold" mb={2}>Caption</Text>
+                <HStack justify="space-between" align="center" mb={2}>
+                  <Text fontWeight="bold">AI Generated Caption</Text>
+                  <Button
+                    size="sm"
+                    colorScheme="purple"
+                    variant="outline"
+                    onClick={handleGenerateArt}
+                    isLoading={generatingArt}
+                    loadingText="Generating..."
+                  >
+                    Generate AI Art
+                  </Button>
+                </HStack>
                 <Text>{caption}</Text>
               </Box>
+
+              {aiArtUrl && (
+                <Box>
+                  <Text fontWeight="bold" mb={2}>AI Art Version</Text>
+                  <Image
+                    src={aiArtUrl}
+                    alt="AI generated art"
+                    borderRadius="md"
+                    w="100%"
+                    maxH="400px"
+                    objectFit="contain"
+                  />
+                </Box>
+              )}
 
               <Box>
                 <Text fontWeight="bold" mb={2}>Tags</Text>
@@ -152,6 +217,35 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
                 <Text fontWeight="bold" mb={2}>Detailed Analysis</Text>
                 <Text>{analysis}</Text>
               </Box>
+
+              {similarImages.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={2}>Similar Images</Text>
+                  <SimpleGrid columns={2} spacing={4}>
+                    {similarImages.map((image) => (
+                      <Box key={image.id} position="relative">
+                        <Image
+                          src={image.mediaUrl}
+                          alt={image.caption}
+                          borderRadius="md"
+                          objectFit="cover"
+                          w="100%"
+                          h="150px"
+                        />
+                        {image.caption && (
+                          <Text
+                            fontSize="sm"
+                            noOfLines={2}
+                            mt={1}
+                          >
+                            {image.caption}
+                          </Text>
+                        )}
+                      </Box>
+                    ))}
+                  </SimpleGrid>
+                </Box>
+              )}
             </VStack>
           )}
         </ModalBody>
