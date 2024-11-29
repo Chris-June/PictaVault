@@ -306,12 +306,11 @@ const Landing = () => {
 
         <FeatureModal
           isOpen={isOpen}
-          onClose={onClose}
-          feature={selectedFeature}
           onClose={() => {
             setSelectedFeature(null);
             onClose();
           }}
+          feature={selectedFeature}
         />
       </Container>
 
