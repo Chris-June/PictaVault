@@ -20,13 +20,15 @@ import {
   Icon,
   Flex
 } from '@chakra-ui/react'
-import { FiHeart, FiMessageCircle, FiShare2, FiMoreVertical, FiEdit2, FiTrash2, FiInfo, FiFolder } from 'react-icons/fi'
+import { FiHeart, FiMessageCircle, FiShare2, FiMoreVertical, FiEdit2, FiTrash2, FiInfo, FiFolder, FiDownload } from 'react-icons/fi'
+import { BiBrain } from 'react-icons/bi';
 import { format } from 'date-fns'
 import { useAuth } from '../../context/AuthContext'
 import { toggleLike } from '../../services/posts'
 import MediaDetailsModal from '../Media/MediaDetailsModal'
 import CommentModal from '../Comments/CommentModal'
 import AddToCollectionModal from '../Collections/AddToCollectionModal'
+import ImageAnalysisModal from '../AI/ImageAnalysisModal';
 import { getDoc, doc } from 'firebase/firestore/lite'
 import { db } from '../../services/firebase'
 
@@ -79,9 +81,12 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
     createdAt: post.createdAt || new Date()
   })
   const [isHovered, setIsHovered] = useState(false)
-  const { isOpen: isDetailsOpen, onOpen: onDetailsOpen, onClose: onDetailsClose } = useDisclosure()
-  const { isOpen: isCommentsOpen, onOpen: onCommentsOpen, onClose: onCommentsClose } = useDisclosure()
-  const { isOpen: isCollectionOpen, onOpen: onCollectionOpen, onClose: onCollectionClose } = useDisclosure()
+  const [isLiked, setIsLiked] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const detailsDisclosure = useDisclosure()
+  const commentsDisclosure = useDisclosure()
+  const collectionDisclosure = useDisclosure()
+  const aiAnalysisDisclosure = useDisclosure()
   const { currentUser } = useAuth()
   const toast = useToast()
   const bgColor = useColorModeValue('white', 'gray.800')
@@ -101,8 +106,6 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
   }, [post])
 
   // Check if the current user has liked the post
-  const [isLiked, setIsLiked] = useState(false)
-  
   useEffect(() => {
     if (postState.likedBy && currentUser) {
       setIsLiked(postState.likedBy.includes(currentUser.uid))
@@ -204,118 +207,80 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
       >
         <Box 
           position="relative" 
+          width="100%"
           paddingTop="100%" 
           overflow="hidden"
-          cursor="pointer"
-          onClick={onCommentsOpen}
-          role="button"
-          aria-label="View comments"
-          _hover={{
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              bg: 'blackAlpha.200',
-              transition: 'all 0.2s'
-            }
-          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
-          <Image
-            src={postState.mediaUrl}
-            alt={postState.caption || 'Uploaded media'}
+          <Box
             position="absolute"
             top="0"
             left="0"
-            width="100%"
-            height="100%"
-            objectFit="cover"
-            fallback={
-              <Box
-                width="100%"
-                height="100%"
-                bg="gray.100"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Text color="gray.500">Image loading...</Text>
-              </Box>
-            }
-            onError={(e) => {
-              console.error('Image load error:', e);
-            }}
-          />
+            right="0"
+            bottom="0"
+            cursor="pointer"
+            onClick={commentsDisclosure.onOpen}
+            role="button"
+            aria-label="View comments"
+          >
+            <Image
+              src={postState.mediaUrl}
+              alt={postState.caption || 'Media content'}
+              width="100%"
+              height="100%"
+              objectFit="cover"
+            />
+          </Box>
           
-          {/* Overlay with comment and like counts */}
           {isHovered && (
             <Box
               position="absolute"
-              top="0"
-              left="0"
-              right="0"
-              bottom="0"
-              bg="blackAlpha.400"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              color="white"
-              transition="all 0.2s"
+              top={2}
+              right={2}
+              bg="blackAlpha.600"
+              borderRadius="md"
+              zIndex={10}
+              onClick={(e) => e.stopPropagation()}
             >
-              <HStack spacing={6}>
-                <VStack spacing={1}>
-                  <FiHeart size="24px" />
-                  <Text fontWeight="bold">{postState.likes || 0}</Text>
-                </VStack>
-                <VStack spacing={1}>
-                  <FiMessageCircle size="24px" />
-                  <Text fontWeight="bold">{postState.comments?.length || 0}</Text>
-                </VStack>
-              </HStack>
+              <Menu>
+                <MenuButton
+                  as={IconButton}
+                  icon={<FiMoreVertical />}
+                  variant="ghost"
+                  color="white"
+                  size="sm"
+                  _hover={{ bg: 'blackAlpha.700' }}
+                />
+                <MenuList>
+                  <MenuItem icon={<FiInfo />} onClick={detailsDisclosure.onOpen}>
+                    View Details
+                  </MenuItem>
+                  <MenuItem icon={<FiFolder />} onClick={collectionDisclosure.onOpen}>
+                    Add to Collection
+                  </MenuItem>
+                  <MenuItem icon={<BiBrain />} onClick={aiAnalysisDisclosure.onOpen}>
+                    AI Analysis
+                  </MenuItem>
+                  {isProfile && (
+                    <>
+                      <MenuItem icon={<FiEdit2 />} onClick={detailsDisclosure.onOpen}>
+                        Edit Details
+                      </MenuItem>
+                      <MenuItem 
+                        icon={<FiTrash2 />} 
+                        color="red.500"
+                        onClick={() => onDelete && onDelete(postState.id)}
+                      >
+                        Delete
+                      </MenuItem>
+                    </>
+                  )}
+                </MenuList>
+              </Menu>
             </Box>
           )}
         </Box>
-
-        {isProfile && isHovered && (
-          <Box
-            position="absolute"
-            top={2}
-            right={2}
-            bg="blackAlpha.600"
-            borderRadius="md"
-          >
-            <Menu>
-              <MenuButton
-                as={IconButton}
-                icon={<FiMoreVertical />}
-                variant="ghost"
-                color="white"
-                size="sm"
-                _hover={{ bg: 'blackAlpha.700' }}
-              />
-              <MenuList>
-                <MenuItem icon={<FiInfo />} onClick={onDetailsOpen}>
-                  View Details
-                </MenuItem>
-                <MenuItem icon={<FiFolder />} onClick={onCollectionOpen}>
-                  Add to Collection
-                </MenuItem>
-                <MenuItem icon={<FiEdit2 />} onClick={onDetailsOpen}>
-                  Edit Details
-                </MenuItem>
-                <MenuItem 
-                  icon={<FiTrash2 />} 
-                  color="red.500"
-                  onClick={() => onDelete && onDelete(postState.id)}
-                >
-                  Delete
-                </MenuItem>
-              </MenuList>
-            </Menu>
-          </Box>
-        )}
 
         <VStack p={4} align="stretch" spacing={3}>
           <Text fontSize="sm" noOfLines={2}>
@@ -340,7 +305,7 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
                   aria-label="Comment"
                   variant="ghost"
                   size="sm"
-                  onClick={onCommentsOpen}
+                  onClick={commentsDisclosure.onOpen}
                 />
               </Tooltip>
             </HStack>
@@ -358,7 +323,7 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
             <Text 
               fontWeight="bold" 
               cursor="pointer" 
-              onClick={onCommentsOpen}
+              onClick={commentsDisclosure.onOpen}
               _hover={{ textDecoration: 'underline' }}
             >
               {(Array.isArray(postState.comments) ? postState.comments.length : 0)} {(Array.isArray(postState.comments) && postState.comments.length === 1) ? 'comment' : 'comments'}
@@ -404,16 +369,16 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
       </Box>
 
       <MediaDetailsModal
-        isOpen={isDetailsOpen}
-        onClose={onDetailsClose}
+        isOpen={detailsDisclosure.isOpen}
+        onClose={detailsDisclosure.onClose}
         media={postState}
         onDelete={onDelete}
         onUpdate={onUpdate}
       />
 
       <CommentModal
-        isOpen={isCommentsOpen}
-        onClose={onCommentsClose}
+        isOpen={commentsDisclosure.isOpen}
+        onClose={commentsDisclosure.onClose}
         post={{
           ...postState,
           comments: Array.isArray(postState.comments) 
@@ -431,9 +396,16 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
       />
 
       <AddToCollectionModal
-        isOpen={isCollectionOpen}
-        onClose={onCollectionClose}
+        isOpen={collectionDisclosure.isOpen}
+        onClose={collectionDisclosure.onClose}
         mediaId={postState.id}
+      />
+
+      <ImageAnalysisModal
+        isOpen={aiAnalysisDisclosure.isOpen}
+        onClose={aiAnalysisDisclosure.onClose}
+        imageUrl={postState.mediaUrl}
+        imageId={postState.id}
       />
     </>
   )
