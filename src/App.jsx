@@ -10,6 +10,8 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import SignIn from './components/Auth/SignIn'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
+import Collections from './pages/Collections'
+import CollectionView from './pages/CollectionView'
 
 const router = createBrowserRouter([
   {
@@ -26,6 +28,26 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <Layout>
           <Home />
+        </Layout>
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/collections',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Collections />
+        </Layout>
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/collections/:collectionId',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <CollectionView />
         </Layout>
       </ProtectedRoute>
     )

@@ -9,12 +9,14 @@ import {
   HStack,
   useToast,
 } from '@chakra-ui/react'
-import { FiChevronDown, FiLogOut, FiUser } from 'react-icons/fi'
+import { FiChevronDown, FiLogOut, FiUser, FiSettings } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const UserMenu = () => {
   const { currentUser, logout } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
 
   const handleSignOut = async () => {
     try {
@@ -49,16 +51,25 @@ const UserMenu = () => {
         variant="ghost"
       >
         <HStack spacing={2}>
-          <Avatar
-            size="sm"
-            name={currentUser.email}
-            src={currentUser.photoURL}
-          />
-          <Text>{currentUser.email}</Text>
+          <Avatar size="sm" name={currentUser.email} src={currentUser.photoURL} />
+          <Text display={{ base: 'none', md: 'block' }}>
+            {currentUser.displayName || currentUser.email}
+          </Text>
         </HStack>
       </MenuButton>
       <MenuList>
-        <MenuItem icon={<FiUser />}>Profile</MenuItem>
+        <MenuItem 
+          icon={<FiUser />} 
+          onClick={() => navigate(`/profile/${currentUser.uid}`)}
+        >
+          Profile
+        </MenuItem>
+        <MenuItem 
+          icon={<FiSettings />} 
+          onClick={() => navigate('/settings')}
+        >
+          Settings
+        </MenuItem>
         <MenuItem icon={<FiLogOut />} onClick={handleSignOut}>
           Sign Out
         </MenuItem>

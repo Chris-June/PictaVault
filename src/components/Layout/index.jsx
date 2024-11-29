@@ -1,11 +1,11 @@
 import { Box } from '@chakra-ui/react'
-import Header from '../Header'
+import Navbar from '../Navbar'
 
 const Layout = ({ children }) => {
   return (
     <Box minH="100vh">
-      <Header />
-      <Box as="main">
+      <Navbar />
+      <Box as="main" pt="72px">
         {children}
       </Box>
     </Box>

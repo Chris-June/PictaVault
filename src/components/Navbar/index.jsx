@@ -18,16 +18,17 @@ import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import UserMenu from '../Auth/UserMenu'
 import SignIn from '../Auth/SignIn'
-import { FiHome } from 'react-icons/fi'
+import { FiHome, FiFolder, FiUpload } from 'react-icons/fi'
 
 const Navbar = () => {
   const { currentUser } = useAuth()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const location = useLocation()
-  const isHomePage = location.pathname === '/'
   
   const bgColor = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.100', 'gray.700')
+
+  const isActive = (path) => location.pathname === path
 
   return (
     <Box
@@ -46,46 +47,63 @@ const Navbar = () => {
             PictaVault
           </Box>
 
-          <Tooltip
-            label="Go to Home"
-            placement="bottom"
-            hasArrow
-            isDisabled={isHomePage}
-          >
-            <IconButton
-              as={RouterLink}
-              to="/"
-              icon={<FiHome size="1.2em" />}
-              variant={isHomePage ? "solid" : "ghost"}
-              colorScheme="blue"
-              aria-label="Home"
-              isDisabled={isHomePage}
-            />
-          </Tooltip>
+          {currentUser && (
+            <HStack spacing={2}>
+              <Tooltip label="Home" placement="bottom">
+                <IconButton
+                  as={RouterLink}
+                  to="/home"
+                  icon={<FiHome size={20} />}
+                  variant={isActive('/home') ? 'solid' : 'ghost'}
+                  colorScheme="purple"
+                  aria-label="Home"
+                />
+              </Tooltip>
+
+              <Tooltip label="Collections" placement="bottom">
+                <IconButton
+                  as={RouterLink}
+                  to="/collections"
+                  icon={<FiFolder size={20} />}
+                  variant={isActive('/collections') ? 'solid' : 'ghost'}
+                  colorScheme="purple"
+                  aria-label="Collections"
+                />
+              </Tooltip>
+
+              <Tooltip label="Upload" placement="bottom">
+                <IconButton
+                  as={RouterLink}
+                  to="/upload"
+                  icon={<FiUpload size={20} />}
+                  variant={isActive('/upload') ? 'solid' : 'ghost'}
+                  colorScheme="purple"
+                  aria-label="Upload"
+                />
+              </Tooltip>
+            </HStack>
+          )}
 
           <Spacer />
 
           {currentUser ? (
-            <>
-              <Button as={RouterLink} to="/upload" colorScheme="blue">
-                Upload
-              </Button>
-              <UserMenu />
-            </>
+            <UserMenu />
           ) : (
-            <Button onClick={onOpen} colorScheme="blue">
-              Sign In
-            </Button>
+            !isActive('/') && (
+              <Button onClick={onOpen} colorScheme="purple">
+                Sign In
+              </Button>
+            )
           )}
         </HStack>
       </Container>
 
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
+      <Modal isOpen={isOpen} onClose={onClose} size="md">
+        <ModalOverlay backdropFilter="blur(4px)" />
         <ModalContent>
           <ModalCloseButton />
           <ModalBody p={8}>
-            <SignIn onClose={onClose} />
+            <SignIn onSuccess={onClose} />
           </ModalBody>
         </ModalContent>
       </Modal>

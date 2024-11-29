@@ -20,12 +20,13 @@ import {
   Icon,
   Flex
 } from '@chakra-ui/react'
-import { FiHeart, FiMessageCircle, FiShare2, FiMoreVertical, FiEdit2, FiTrash2, FiInfo } from 'react-icons/fi'
+import { FiHeart, FiMessageCircle, FiShare2, FiMoreVertical, FiEdit2, FiTrash2, FiInfo, FiFolder } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { useAuth } from '../../context/AuthContext'
 import { toggleLike } from '../../services/posts'
 import MediaDetailsModal from '../Media/MediaDetailsModal'
 import CommentModal from '../Comments/CommentModal'
+import AddToCollectionModal from '../Collections/AddToCollectionModal'
 import { getDoc, doc } from 'firebase/firestore/lite'
 import { db } from '../../services/firebase'
 
@@ -80,6 +81,7 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
   const [isHovered, setIsHovered] = useState(false)
   const { isOpen: isDetailsOpen, onOpen: onDetailsOpen, onClose: onDetailsClose } = useDisclosure()
   const { isOpen: isCommentsOpen, onOpen: onCommentsOpen, onClose: onCommentsClose } = useDisclosure()
+  const { isOpen: isCollectionOpen, onOpen: onCollectionOpen, onClose: onCollectionClose } = useDisclosure()
   const { currentUser } = useAuth()
   const toast = useToast()
   const bgColor = useColorModeValue('white', 'gray.800')
@@ -294,6 +296,12 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
                 _hover={{ bg: 'blackAlpha.700' }}
               />
               <MenuList>
+                <MenuItem icon={<FiInfo />} onClick={onDetailsOpen}>
+                  View Details
+                </MenuItem>
+                <MenuItem icon={<FiFolder />} onClick={onCollectionOpen}>
+                  Add to Collection
+                </MenuItem>
                 <MenuItem icon={<FiEdit2 />} onClick={onDetailsOpen}>
                   Edit Details
                 </MenuItem>
@@ -420,6 +428,12 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
             : []
         }}
         onCommentUpdate={handleCommentUpdate}
+      />
+
+      <AddToCollectionModal
+        isOpen={isCollectionOpen}
+        onClose={onCollectionClose}
+        mediaId={postState.id}
       />
     </>
   )
