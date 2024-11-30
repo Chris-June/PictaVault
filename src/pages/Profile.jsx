@@ -26,6 +26,7 @@ import MediaCard from '../components/MediaCard'
 import ProfilePhotoUpload from '../components/Profile/ProfilePhotoUpload'
 import ProfileEditForm from '../components/Profile/ProfileEditForm'
 import ProfileDetails from '../components/Profile/ProfileDetails'
+import { createToastMessage } from '../services/toastPersona'
 
 const Profile = () => {
   const { userId } = useParams()
@@ -76,28 +77,39 @@ const Profile = () => {
 
   const handlePostDelete = async (postId) => {
     try {
-      // Delete the post
-      await deletePost(postId)
-      // Update the UI
-      setUserPosts(prev => prev.filter(post => post.id !== postId))
-      toast({
-        title: 'Success',
-        description: 'Post deleted successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
+      await deletePost(postId);
+      
+      // Update local state to remove the deleted post
+      setUserPosts(prevPosts => {
+        const updatedPosts = prevPosts.filter(post => post.id !== postId);
+        console.log('Posts after deletion:', updatedPosts); // Debug log
+        return updatedPosts;
+      });
+
+      // Update profile post count if needed
+      if (userProfile?.postCount) {
+        setUserProfile(prev => ({
+          ...prev,
+          postCount: Math.max(0, prev.postCount - 1)
+        }));
+      }
+
+      const toastMessage = await createToastMessage('delete', 'success', {
+        itemType: 'memory'
+      });
+      toast(toastMessage);
     } catch (error) {
-      console.error('Error deleting post:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to delete post',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      })
+      console.error('Error deleting post:', error);
+      const toastMessage = await createToastMessage('delete', 'error', {
+        itemType: 'memory'
+      });
+      toast(toastMessage);
     }
-  }
+  };
+
+  useEffect(() => {
+    console.log('Current posts:', userPosts);
+  }, [userPosts]);
 
   const handleMediaUpdate = (updatedPost) => {
     setUserPosts(prev => prev.map(post => 

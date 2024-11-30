@@ -30,8 +30,9 @@ import CommentModal from '../Comments/CommentModal'
 import AddToCollectionModal from '../Collections/AddToCollectionModal'
 import ImageAnalysisModal from '../AI/ImageAnalysisModal'
 import EditMediaModal from '../Media/EditMediaModal';
-import { getDoc, doc } from 'firebase/firestore/lite'
+import { getDoc, doc } from 'firebase/firestore'
 import { db } from '../../services/firebase'
+import { createToastMessage } from '../../services/toastPersona'
 
 // Safe date component with error boundary
 const SafeDate = ({ date }) => {
@@ -203,8 +204,12 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
     }
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     editDisclosure.onOpen();
+    const toastMessage = await createToastMessage('edit', 'start', {
+      itemType: 'photo'
+    });
+    toast(toastMessage);
   };
 
   const handleUpdate = (updatedData) => {
@@ -217,15 +222,47 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
     }
   };
 
-  const handleDownload = () => {
-    if (postState.mediaUrl) {
-      // Create a temporary anchor element
-      const link = document.createElement('a');
-      link.href = postState.mediaUrl;
-      link.download = `photo-${postState.id}.jpg`; // You can customize the filename
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(postState.mediaUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pictavault-${postState.id}.${blob.type.split('/')[1]}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      const toastMessage = await createToastMessage('download', 'success', {
+        itemType: 'photo'
+      });
+      toast(toastMessage);
+    } catch (error) {
+      console.error('Error downloading media:', error);
+      const toastMessage = await createToastMessage('download', 'error', {
+        itemType: 'photo'
+      });
+      toast(toastMessage);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      if (onDelete) {
+        await onDelete(post.id);
+        const toastMessage = await createToastMessage('delete', 'success', {
+          itemType: 'photo'
+        });
+        toast(toastMessage);
+      }
+    } catch (error) {
+      console.error('Error handling delete:', error);
+      const toastMessage = await createToastMessage('delete', 'error', {
+        itemType: 'photo'
+      });
+      toast(toastMessage);
     }
   };
 
@@ -291,7 +328,7 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
                   <MenuItem icon={<FiEdit2 />} onClick={handleEdit}>
                     Edit Details
                   </MenuItem>
-                  <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => onDelete && onDelete(postState.id)}>
+                  <MenuItem icon={<FiTrash2 />} color="red.500" onClick={handleDelete}>
                     Delete
                   </MenuItem>
                 </MenuList>

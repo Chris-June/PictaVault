@@ -3,41 +3,68 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc, 
-  doc, 
-  serverTimestamp,
+  doc,
+  getDoc,
   getDocs,
   query,
+  where,
   orderBy,
   limit,
-  where,
-  increment,
+  startAfter,
   arrayUnion,
   arrayRemove,
-  getDoc,
+  serverTimestamp,
   Timestamp
 } from 'firebase/firestore'
-import { ref, deleteObject } from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db } from './firebase'
+import { getStorage, ref, deleteObject } from 'firebase/storage'
+import { extractHashtags } from '../utils/textUtils'
 
-// Extract hashtags from text
-export const extractHashtags = (text) => {
-  if (!text) return [];
+// Rate limiting configuration
+const RATE_LIMITS = {
+  comments: {
+    windowMs: 60 * 60 * 1000, // 1 hour
+    maxRequests: 50 // max requests per window
+  }
+};
+
+// Rate limiting state
+const rateLimitState = new Map();
+
+// Check rate limit
+const isRateLimited = (key, type = 'comments') => {
+  const now = Date.now();
+  const windowMs = RATE_LIMITS[type].windowMs;
+  const maxRequests = RATE_LIMITS[type].maxRequests;
   
-  // Match both #word and plain words, excluding common punctuation
-  const words = text.split(/[\s,.]/).filter(word => 
-    word && 
-    !word.includes('!') && 
-    !word.includes('?') && 
-    !word.includes(';') &&
-    word !== '#'
+  // Get or initialize rate limit data for this key
+  const limitData = rateLimitState.get(key) || {
+    requests: [],
+    blocked: false,
+    blockedUntil: 0
+  };
+  
+  // Clear old requests
+  limitData.requests = limitData.requests.filter(
+    time => now - time < windowMs
   );
-
-  return words.map(word => {
-    // Remove # if it exists at the start and any trailing punctuation
-    const cleanWord = word.startsWith('#') ? word.slice(1) : word;
-    // Return word with # prefix if it's a valid tag (alphanumeric, no spaces)
-    return cleanWord.match(/^[\w\u0590-\u05ff]+$/) ? `#${cleanWord}` : null;
-  }).filter(Boolean); // Remove null values
+  
+  // Check if currently blocked
+  if (limitData.blocked && now < limitData.blockedUntil) {
+    throw new Error(`Rate limit exceeded. Try again in ${Math.ceil((limitData.blockedUntil - now) / 1000)} seconds`);
+  }
+  
+  // Check request count
+  if (limitData.requests.length >= maxRequests) {
+    limitData.blocked = true;
+    limitData.blockedUntil = now + windowMs;
+    rateLimitState.set(key, limitData);
+    throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(windowMs / 1000)} seconds`);
+  }
+  
+  // Add new request
+  limitData.requests.push(now);
+  rateLimitState.set(key, limitData);
 };
 
 export const createPost = async ({ mediaUrl, caption, userId, mediaType, mediaPath }) => {
@@ -102,7 +129,7 @@ export const deletePost = async (postId) => {
     // Delete the media from storage if it exists
     if (postData.mediaPath) {
       try {
-        const storageRef = ref(storage, postData.mediaPath);
+        const storageRef = ref(getStorage(), postData.mediaPath);
         await deleteObject(storageRef);
       } catch (storageError) {
         console.error('Error deleting media from storage:', storageError);
@@ -211,44 +238,6 @@ export const getAllPosts = async (options = {}) => {
   }
 }
 
-// Rate limiting configuration
-const RATE_LIMITS = {
-  comments: {
-    windowMs: 60 * 60 * 1000, // 1 hour
-    maxRequests: 100,
-    store: new Map()
-  }
-};
-
-const isRateLimited = (key, type = 'comments') => {
-  const now = Date.now();
-  const limit = RATE_LIMITS[type];
-  const userKey = `${type}_${key}`;
-  
-  // Get or initialize user's request data
-  const userData = limit.store.get(userKey) || { 
-    count: 0, 
-    resetAt: now + limit.windowMs 
-  };
-  
-  // Reset if window has passed
-  if (now >= userData.resetAt) {
-    userData.count = 0;
-    userData.resetAt = now + limit.windowMs;
-  }
-  
-  // Check if limit exceeded
-  if (userData.count >= limit.maxRequests) {
-    const waitMinutes = Math.ceil((userData.resetAt - now) / (60 * 1000));
-    throw new Error(`Rate limit exceeded. Please try again in ${waitMinutes} minutes.`);
-  }
-  
-  // Update count and store
-  userData.count++;
-  limit.store.set(userKey, userData);
-  return false;
-};
-
 // Get comments for a post
 export const getPostComments = async (postId) => {
   try {
@@ -330,42 +319,47 @@ export const addComment = async (postId, commentData) => {
 // Delete a comment from a post
 export const deleteComment = async (postId, commentToDelete) => {
   try {
-    const postRef = doc(db, 'posts', postId)
-    const postDoc = await getDoc(postRef)
+    const postRef = doc(db, 'posts', postId);
+    const postDoc = await getDoc(postRef);
     
     if (!postDoc.exists()) {
-      throw new Error('Post not found')
+      throw new Error('Post not found');
     }
 
     await updateDoc(postRef, {
       comments: arrayRemove(commentToDelete),
-      commentsCount: increment(-1)
-    })
+      updatedAt: serverTimestamp()
+    });
+
+    return true;
   } catch (error) {
-    console.error('Error deleting comment:', error)
-    throw error
+    console.error('Error deleting comment:', error);
+    throw error;
   }
-}
+};
 
 // Like/Unlike a post
 export const toggleLike = async (postId, userId) => {
   try {
     const postRef = doc(db, 'posts', postId);
     const postDoc = await getDoc(postRef);
-    const postData = postDoc.data();
     
-    // Check if user has already liked the post
-    const likedBy = postData.likedBy || [];
-    const isLiked = likedBy.includes(userId);
-    
+    if (!postDoc.exists()) {
+      throw new Error('Post not found');
+    }
+
+    const post = postDoc.data();
+    const likes = post.likes || [];
+    const isLiked = likes.includes(userId);
+
     await updateDoc(postRef, {
-      likes: increment(isLiked ? -1 : 1),
-      likedBy: isLiked ? arrayRemove(userId) : arrayUnion(userId)
+      likes: isLiked ? arrayRemove(userId) : arrayUnion(userId),
+      updatedAt: serverTimestamp()
     });
 
     return !isLiked;
   } catch (error) {
     console.error('Error toggling like:', error);
-    throw error
+    throw error;
   }
 };
