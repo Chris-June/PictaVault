@@ -248,22 +248,49 @@ export const findSimilarImages = async (postId, maxResults = 5) => {
 
 export const generateAIArt = async (imageUrl) => {
   try {
-    // First, get the image content
-    const base64Image = await getImageAsBase64(imageUrl);
-
-    // Generate variations using OpenAI's API
-    const response = await openai.images.createVariation({
-      image: base64Image,
-      n: 1,
-      size: "1024x1024",
-      response_format: "url",
+    // Generate a creative prompt for the image using GPT-4
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { 
+              type: "text", 
+              text: "Describe this image in a way that would make a great prompt for an AI art generator. Focus on style, mood, and artistic elements. Make it creative and detailed but concise." 
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+              },
+            },
+          ],
+        },
+      ],
     });
 
-    if (!response.data?.[0]?.url) {
+    if (!response.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
+
+    const prompt = response.choices[0].message.content;
+
+    // Generate new image using DALL-E 3
+    const imageResponse = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+      style: "vivid"
+    });
+
+    if (!imageResponse.data?.[0]?.url) {
       throw new Error('Invalid response from OpenAI API');
     }
 
-    return response.data[0].url;
+    return imageResponse.data[0].url;
   } catch (error) {
     console.error('Error generating AI art:', error);
     if (error.message.includes('API key')) {
