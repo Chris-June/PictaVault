@@ -18,7 +18,7 @@ import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import UserMenu from '../Auth/UserMenu'
 import SignIn from '../Auth/SignIn'
-import { FiHome, FiFolder, FiUpload } from 'react-icons/fi'
+import { FiHome, FiFolder, FiUpload, FiLayers } from 'react-icons/fi'
 
 const Navbar = () => {
   const { currentUser } = useAuth()
@@ -55,7 +55,7 @@ const Navbar = () => {
                   to="/home"
                   icon={<FiHome size={20} />}
                   variant={isActive('/home') ? 'solid' : 'ghost'}
-                  colorScheme="purple"
+                  colorScheme={isActive('/home') ? 'purple' : 'gray'}
                   aria-label="Home"
                 />
               </Tooltip>
@@ -66,8 +66,19 @@ const Navbar = () => {
                   to="/collections"
                   icon={<FiFolder size={20} />}
                   variant={isActive('/collections') ? 'solid' : 'ghost'}
-                  colorScheme="purple"
+                  colorScheme={isActive('/collections') ? 'purple' : 'gray'}
                   aria-label="Collections"
+                />
+              </Tooltip>
+
+              <Tooltip label="Auto Albums" placement="bottom">
+                <IconButton
+                  as={RouterLink}
+                  to="/auto-albums"
+                  icon={<FiLayers size={20} />}
+                  variant={isActive('/auto-albums') ? 'solid' : 'ghost'}
+                  colorScheme={isActive('/auto-albums') ? 'purple' : 'gray'}
+                  aria-label="Auto Albums"
                 />
               </Tooltip>
 
@@ -77,7 +88,7 @@ const Navbar = () => {
                   to="/upload"
                   icon={<FiUpload size={20} />}
                   variant={isActive('/upload') ? 'solid' : 'ghost'}
-                  colorScheme="purple"
+                  colorScheme={isActive('/upload') ? 'purple' : 'gray'}
                   aria-label="Upload"
                 />
               </Tooltip>

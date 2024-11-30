@@ -12,6 +12,7 @@ import SignIn from './components/Auth/SignIn'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import Collections from './pages/Collections'
 import CollectionView from './pages/CollectionView'
+import AutoAlbums from './pages/AutoAlbums'
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,16 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <Layout>
           <CollectionView />
+        </Layout>
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/auto-albums',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <AutoAlbums />
         </Layout>
       </ProtectedRoute>
     )
