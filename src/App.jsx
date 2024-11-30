@@ -13,6 +13,7 @@ import ProtectedRoute from './components/Auth/ProtectedRoute'
 import Collections from './pages/Collections'
 import CollectionView from './pages/CollectionView'
 import AutoAlbums from './pages/AutoAlbums'
+import Memories from './pages/Memories'
 
 const router = createBrowserRouter([
   {
@@ -49,6 +50,16 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <Layout>
           <CollectionView />
+        </Layout>
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/memories',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Memories />
         </Layout>
       </ProtectedRoute>
     )

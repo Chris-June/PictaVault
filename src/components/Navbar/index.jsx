@@ -18,7 +18,7 @@ import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import UserMenu from '../Auth/UserMenu'
 import SignIn from '../Auth/SignIn'
-import { FiHome, FiFolder, FiUpload, FiLayers } from 'react-icons/fi'
+import { FiHome, FiFolder, FiUpload, FiLayers, FiClock } from 'react-icons/fi'
 
 const Navbar = () => {
   const { currentUser } = useAuth()
@@ -68,6 +68,17 @@ const Navbar = () => {
                   variant={isActive('/collections') ? 'solid' : 'ghost'}
                   colorScheme={isActive('/collections') ? 'purple' : 'gray'}
                   aria-label="Collections"
+                />
+              </Tooltip>
+
+              <Tooltip label="Memories" placement="bottom">
+                <IconButton
+                  as={RouterLink}
+                  to="/memories"
+                  icon={<FiClock size={20} />}
+                  variant={isActive('/memories') ? 'solid' : 'ghost'}
+                  colorScheme={isActive('/memories') ? 'purple' : 'gray'}
+                  aria-label="Memories"
                 />
               </Tooltip>
 
