@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, startTransition } from 'react'
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -48,12 +48,14 @@ export const AuthProvider = ({ children }) => {
       // Update Firestore profile data
       await updateUserProfileData(auth.currentUser.uid, updates)
       
-      // Update local state
-      setCurrentUser(prev => ({
-        ...prev,
-        displayName: updates.displayName || prev.displayName,
-        photoURL: updates.photoURL || prev.photoURL
-      }))
+      startTransition(() => {
+        // Update local state
+        setCurrentUser(prev => ({
+          ...prev,
+          displayName: updates.displayName || prev.displayName,
+          photoURL: updates.photoURL || prev.photoURL
+        }))
+      })
     } catch (error) {
       console.error('Error updating profile:', error)
       throw error
@@ -62,18 +64,20 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // Convert user object to simple primitive values
-        setCurrentUser({
-          uid: String(user.uid || ''),
-          email: String(user.email || ''),
-          displayName: String(user.displayName || ''),
-          photoURL: String(user.photoURL || '')
-        })
-      } else {
-        setCurrentUser(null)
-      }
-      setLoading(false)
+      startTransition(() => {
+        if (user) {
+          // Convert user object to simple primitive values
+          setCurrentUser({
+            uid: String(user.uid || ''),
+            email: String(user.email || ''),
+            displayName: String(user.displayName || ''),
+            photoURL: String(user.photoURL || '')
+          })
+        } else {
+          setCurrentUser(null)
+        }
+        setLoading(false)
+      })
     })
 
     return unsubscribe
@@ -96,7 +100,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? <div>Loading...</div> : children}
     </AuthContext.Provider>
   )
 }

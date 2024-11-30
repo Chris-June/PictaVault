@@ -30,7 +30,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { storage, db } from '../services/firebase'
 import { useAuth } from '../context/AuthContext'
-import { FiUpload, FiX, FiInfo } from 'react-icons/fi'
+import { FiUpload, FiX, FiInfo, FiMessageCircle } from 'react-icons/fi'
+import CaptionSuggestionModal from '../components/Upload/CaptionSuggestionModal'
 
 const Upload = () => {
   const [files, setFiles] = useState([])
@@ -42,6 +43,8 @@ const Upload = () => {
   const [progress, setProgress] = useState(0)
   const [captionError, setCaptionError] = useState('')
   const [locationError, setLocationError] = useState('')
+  const [isCaptionModalOpen, setIsCaptionModalOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState('')
   
   const CAPTION_MAX_LENGTH = 150
   const LOCATION_REGEX = /^[a-zA-Z0-9\s,.-]+$/
@@ -59,11 +62,16 @@ const Upload = () => {
     return () => files.forEach(file => URL.revokeObjectURL(file.preview))
   }, [files])
 
-  const onDrop = useCallback(acceptedFiles => {
-    const newFiles = acceptedFiles.map(file => Object.assign(file, {
-      preview: URL.createObjectURL(file)
-    }))
-    setFiles(newFiles)
+  const onDrop = useCallback((acceptedFiles) => {
+    if (acceptedFiles?.length) {
+      const newFiles = acceptedFiles.map(file => Object.assign(file, {
+        preview: URL.createObjectURL(file)
+      }))
+      setFiles(newFiles)
+      // Create preview URL for the first image
+      const url = URL.createObjectURL(acceptedFiles[0])
+      setPreviewUrl(url)
+    }
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -288,13 +296,25 @@ const Upload = () => {
                   </Box>
                 </Tooltip>
               </Flex>
-              <Textarea
-                value={caption}
-                onChange={handleCaptionChange}
-                placeholder="Write a caption for your post..."
-                resize="vertical"
-                maxLength={CAPTION_MAX_LENGTH}
-              />
+              <HStack>
+                <Textarea
+                  value={caption}
+                  onChange={handleCaptionChange}
+                  placeholder="Write a caption for your post..."
+                  maxLength={CAPTION_MAX_LENGTH}
+                />
+                {files.length > 0 && (
+                  <Tooltip label="Get AI caption suggestions">
+                    <IconButton
+                      icon={<FiMessageCircle />}
+                      onClick={() => setIsCaptionModalOpen(true)}
+                      aria-label="Get caption suggestions"
+                      colorScheme="blue"
+                      variant="outline"
+                    />
+                  </Tooltip>
+                )}
+              </HStack>
               <Flex justify="space-between" mt={1}>
                 <FormErrorMessage>{captionError}</FormErrorMessage>
                 <Text fontSize="sm" color={caption.length > CAPTION_MAX_LENGTH ? "red.500" : "gray.500"}>
@@ -395,6 +415,17 @@ const Upload = () => {
           </VStack>
         </Box>
       </VStack>
+
+      <CaptionSuggestionModal
+        isOpen={isCaptionModalOpen}
+        onClose={() => setIsCaptionModalOpen(false)}
+        imageUrl={previewUrl}
+        onSelectCaption={(newCaption) => {
+          setCaption(newCaption)
+          setCaptionError('')
+        }}
+        initialCaption={caption}
+      />
     </Container>
   )
 }

@@ -13,6 +13,8 @@ import {
   Grid,
   GridItem,
   Avatar,
+  Spinner,
+  useToast
 } from '@chakra-ui/react'
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
@@ -33,6 +35,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const bgColor = useColorModeValue('white', 'gray.800')
+  const toast = useToast()
 
   const effectiveUserId = userId === 'me' ? currentUser?.uid : userId
   const isOwnProfile = userId === 'me' || userId === currentUser?.uid
@@ -40,6 +43,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true)
         // Fetch user profile
         if (effectiveUserId) {
           const profile = await getUserProfile(effectiveUserId)
@@ -52,49 +56,14 @@ const Profile = () => {
           where('userId', '==', effectiveUserId)
         )
         const querySnapshot = await getDocs(q)
-        const posts = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          
-          // Convert timestamps
-          let createdAt = null;
-          try {
-            if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-              createdAt = data.createdAt.toDate();
-            } else if (data.createdAt) {
-              createdAt = new Date(data.createdAt);
-            }
-          } catch (error) {
-            console.error('Error converting createdAt:', error);
-            createdAt = new Date();
-          }
-
-          // Process comments
-          const comments = data.comments?.map(comment => {
-            try {
-              return {
-                id: comment.id || '',
-                text: String(comment.text || ''),
-                userId: comment.userId || '',
-                userName: comment.userName || 'Anonymous',
-                userPhotoURL: comment.userPhotoURL || '',
-                createdAt: comment.createdAt ? new Date(comment.createdAt) : new Date()
-              };
-            } catch (error) {
-              console.error('Error processing comment:', error);
-              return null;
-            }
-          }).filter(Boolean) || [];
-
-          return {
-            id: doc.id,
-            ...data,
-            createdAt,
-            comments
-          };
-        });
+        const posts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          userId: effectiveUserId // Ensure userId is set correctly
+        }))
         setUserPosts(posts)
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error('Error fetching profile data:', error)
       } finally {
         setLoading(false)
       }
@@ -103,46 +72,45 @@ const Profile = () => {
     if (effectiveUserId) {
       fetchData()
     }
-  }, [effectiveUserId, currentUser])
-
-  const handleProfileUpdate = async () => {
-    if (effectiveUserId) {
-      const profile = await getUserProfile(effectiveUserId)
-      setUserProfile(profile)
-    }
-  }
-
-  const handleMediaDelete = (mediaId) => {
-    setUserPosts(prev => prev.filter(post => post.id !== mediaId))
-  }
-
-  const handleMediaUpdate = (updatedMedia) => {
-    setUserPosts(prev => prev.map(post => 
-      post.id === updatedMedia.id ? updatedMedia : post
-    ))
-  }
+  }, [effectiveUserId])
 
   const handlePostDelete = async (postId) => {
     try {
-      // Remove the post from the local state immediately for better UX
-      setUserPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
-      
-      // Also update the profile stats
-      if (userProfile) {
-        setUserProfile(prev => ({
-          ...prev,
-          postCount: Math.max(0, (prev?.postCount || 1) - 1)
-        }));
-      }
+      // Delete the post
+      await deletePost(postId)
+      // Update the UI
+      setUserPosts(prev => prev.filter(post => post.id !== postId))
+      toast({
+        title: 'Success',
+        description: 'Post deleted successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
     } catch (error) {
-      console.error('Error handling post deletion:', error);
-      // Refresh the posts list in case of error
-      fetchData();
+      console.error('Error deleting post:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete post',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
     }
-  };
+  }
+
+  const handleMediaUpdate = (updatedPost) => {
+    setUserPosts(prev => prev.map(post => 
+      post.id === updatedPost.id ? { ...post, ...updatedPost } : post
+    ))
+  }
 
   if (loading) {
-    return null // or a loading spinner
+    return (
+      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
+        <Spinner size="xl" />
+      </Box>
+    )
   }
 
   return (
@@ -213,6 +181,13 @@ const Profile = () => {
             w="100%"
           >
             {userPosts.map(post => {
+              // Debug log for each post
+              console.log('Post data:', {
+                postId: post.id,
+                userId: post.userId,
+                currentUserId: currentUser?.uid
+              });
+
               // Format comments properly
               const formattedComments = Array.isArray(post.comments) 
                 ? post.comments.map(comment => ({
@@ -251,7 +226,7 @@ const Profile = () => {
           isOpen={isEditModalOpen} 
           onClose={() => {
             setIsEditModalOpen(false)
-            handleProfileUpdate()
+            // handleProfileUpdate()
           }} 
         />
       )}

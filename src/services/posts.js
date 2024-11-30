@@ -66,18 +66,26 @@ export const createPost = async ({ mediaUrl, caption, userId, mediaType, mediaPa
   }
 }
 
-export const updatePost = async (postId, updates) => {
+export const updatePost = async (updatedData) => {
   try {
-    const postRef = doc(db, 'posts', postId)
-    await updateDoc(postRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    })
+    const postRef = doc(db, 'posts', updatedData.id);
+    
+    // Remove id from the data to be updated
+    const { id, ...dataToUpdate } = updatedData;
+    
+    // Add timestamp
+    const data = {
+      ...dataToUpdate,
+      updatedAt: serverTimestamp(),
+    };
+
+    await updateDoc(postRef, data);
+    return true;
   } catch (error) {
-    console.error('Error updating post:', error)
-    throw error
+    console.error('Error updating post:', error);
+    throw error;
   }
-}
+};
 
 export const deletePost = async (postId) => {
   try {

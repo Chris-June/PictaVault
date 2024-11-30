@@ -28,7 +28,8 @@ import { toggleLike } from '../../services/posts'
 import MediaDetailsModal from '../Media/MediaDetailsModal'
 import CommentModal from '../Comments/CommentModal'
 import AddToCollectionModal from '../Collections/AddToCollectionModal'
-import ImageAnalysisModal from '../AI/ImageAnalysisModal';
+import ImageAnalysisModal from '../AI/ImageAnalysisModal'
+import EditMediaModal from '../Media/EditMediaModal';
 import { getDoc, doc } from 'firebase/firestore/lite'
 import { db } from '../../services/firebase'
 
@@ -87,10 +88,21 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
   const commentsDisclosure = useDisclosure()
   const collectionDisclosure = useDisclosure()
   const aiAnalysisDisclosure = useDisclosure()
+  const editDisclosure = useDisclosure()
   const { currentUser } = useAuth()
   const toast = useToast()
   const bgColor = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.700')
+
+  // Debug logs
+  useEffect(() => {
+    console.log('MediaCard Props:', {
+      isProfile,
+      postUserId: post.userId,
+      currentUserId: currentUser?.uid,
+      isOwner: currentUser?.uid === post.userId
+    });
+  }, [isProfile, post.userId, currentUser]);
 
   // Update state when post changes
   useEffect(() => {
@@ -191,6 +203,32 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
     }
   }
 
+  const handleEdit = () => {
+    editDisclosure.onOpen();
+  };
+
+  const handleUpdate = (updatedData) => {
+    setPostState(prev => ({
+      ...prev,
+      ...updatedData
+    }));
+    if (onUpdate) {
+      onUpdate(updatedData);
+    }
+  };
+
+  const handleDownload = () => {
+    if (postState.mediaUrl) {
+      // Create a temporary anchor element
+      const link = document.createElement('a');
+      link.href = postState.mediaUrl;
+      link.download = `photo-${postState.id}.jpg`; // You can customize the filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <>
       <Box
@@ -202,16 +240,12 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
         bg={bgColor}
         transition="all 0.2s"
         _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         <Box 
           position="relative" 
           width="100%"
           paddingTop="100%" 
           overflow="hidden"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
           <Box
             position="absolute"
@@ -233,7 +267,40 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
             />
           </Box>
           
-          {isHovered && (
+          {/* Profile page menu - only for editing media details */}
+          {isProfile && currentUser && post.userId === currentUser.uid && (
+            <Box
+              position="absolute"
+              top={2}
+              right={2}
+              borderRadius="md"
+              zIndex={10}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Menu>
+                <MenuButton
+                  as={IconButton}
+                  icon={<FiMoreVertical />}
+                  variant="ghost"
+                  size="sm"
+                  bg="blackAlpha.600"
+                  color="white"
+                  _hover={{ bg: 'blackAlpha.700' }}
+                />
+                <MenuList>
+                  <MenuItem icon={<FiEdit2 />} onClick={handleEdit}>
+                    Edit Details
+                  </MenuItem>
+                  <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => onDelete && onDelete(postState.id)}>
+                    Delete
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            </Box>
+          )}
+
+          {/* Home page menu - for general interactions */}
+          {!isProfile && isHovered && (
             <Box
               position="absolute"
               top={2}
@@ -256,26 +323,15 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
                   <MenuItem icon={<FiInfo />} onClick={detailsDisclosure.onOpen}>
                     View Details
                   </MenuItem>
-                  <MenuItem icon={<FiFolder />} onClick={collectionDisclosure.onOpen}>
-                    Add to Collection
-                  </MenuItem>
                   <MenuItem icon={<BiBrain />} onClick={aiAnalysisDisclosure.onOpen}>
                     AI Analysis
                   </MenuItem>
-                  {isProfile && (
-                    <>
-                      <MenuItem icon={<FiEdit2 />} onClick={detailsDisclosure.onOpen}>
-                        Edit Details
-                      </MenuItem>
-                      <MenuItem 
-                        icon={<FiTrash2 />} 
-                        color="red.500"
-                        onClick={() => onDelete && onDelete(postState.id)}
-                      >
-                        Delete
-                      </MenuItem>
-                    </>
-                  )}
+                  <MenuItem icon={<FiFolder />} onClick={collectionDisclosure.onOpen}>
+                    Add to Collection
+                  </MenuItem>
+                  <MenuItem icon={<FiDownload />} onClick={handleDownload}>
+                    Download
+                  </MenuItem>
                 </MenuList>
               </Menu>
             </Box>
@@ -406,6 +462,13 @@ const MediaCard = ({ post, isProfile, onDelete, onUpdate }) => {
         onClose={aiAnalysisDisclosure.onClose}
         imageUrl={postState.mediaUrl}
         imageId={postState.id}
+      />
+
+      <EditMediaModal
+        isOpen={editDisclosure.isOpen}
+        onClose={editDisclosure.onClose}
+        media={postState}
+        onUpdate={handleUpdate}
       />
     </>
   )

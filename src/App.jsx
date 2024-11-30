@@ -86,7 +86,11 @@ const router = createBrowserRouter([
     path: '*',
     element: <NotFound />
   }
-])
+], {
+  future: {
+    v7_startTransition: true
+  }
+})
 
 function App() {
   return (

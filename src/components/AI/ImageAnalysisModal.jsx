@@ -4,7 +4,9 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
+  ModalBody,
   ModalCloseButton,
+  ModalFooter,
   VStack,
   Text,
   Tag,
@@ -128,7 +130,7 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
-      <ModalContent>
+      <ModalContent maxW="800px">
         <ModalHeader>AI Image Analysis</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
@@ -249,6 +251,9 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
             </VStack>
           )}
         </ModalBody>
+        <ModalFooter>
+          <Button onClick={onClose}>Close</Button>
+        </ModalFooter>
       </ModalContent>
     </Modal>
   );
