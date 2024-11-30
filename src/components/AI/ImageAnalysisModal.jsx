@@ -4,6 +4,7 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
+  ModalBody,
   ModalCloseButton,
   VStack,
   Text,
