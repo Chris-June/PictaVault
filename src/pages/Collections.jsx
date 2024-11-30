@@ -8,13 +8,21 @@ import {
   Text,
   Container,
   Heading,
-  useToast
+  useToast,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  HStack,
+  Icon
 } from '@chakra-ui/react'
-import { Plus } from 'lucide-react'
+import { Plus, FolderOpen, Sparkles } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getUserCollections } from '../services/collections'
 import CollectionCard from '../components/Collections/CollectionCard'
 import CreateCollectionModal from '../components/Collections/CreateCollectionModal'
+import OrganizedPhotos from '../components/Photos/OrganizedPhotos'
 
 const Collections = () => {
   const { user } = useAuth()
@@ -87,53 +95,87 @@ const Collections = () => {
 
   return (
     <Container maxW="container.xl" py={8}>
-      <VStack spacing={8} align="stretch">
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Heading size="lg">My Collections</Heading>
-          <Button
-            leftIcon={<Plus />}
-            colorScheme="purple"
-            onClick={onOpen}
-          >
-            New Collection
-          </Button>
-        </Box>
+      <Tabs variant="soft-rounded" colorScheme="purple">
+        <TabList mb={6}>
+          <HStack spacing={8}>
+            <Tab>
+              <HStack>
+                <Icon as={FolderOpen} />
+                <Text>My Collections</Text>
+              </HStack>
+            </Tab>
+            <Tab>
+              <HStack>
+                <Icon as={Sparkles} />
+                <Text>AI-Organized</Text>
+              </HStack>
+            </Tab>
+          </HStack>
+        </TabList>
 
-        {collections.length === 0 && !loading ? (
-          <Box textAlign="center" py={10}>
-            <Text fontSize="lg" color="gray.500">
-              No collections yet. Create your first collection to organize your media!
-            </Text>
-          </Box>
-        ) : (
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-            {collections.map(collection => (
-              <CollectionCard
-                key={collection.id}
-                collection={collection}
-                onUpdate={(updatedCollection) => {
-                  setCollections(prev =>
-                    prev.map(c =>
-                      c.id === updatedCollection.id ? updatedCollection : c
-                    )
-                  )
-                }}
-                onDelete={(deletedId) => {
-                  setCollections(prev =>
-                    prev.filter(c => c.id !== deletedId)
-                  )
-                }}
-              />
-            ))}
-          </SimpleGrid>
-        )}
+        <TabPanels>
+          {/* Manual Collections Panel */}
+          <TabPanel p={0}>
+            <VStack spacing={8} align="stretch">
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Heading size="lg">My Collections</Heading>
+                <Button
+                  leftIcon={<Plus />}
+                  colorScheme="purple"
+                  onClick={onOpen}
+                >
+                  New Collection
+                </Button>
+              </Box>
 
-        {loading && (
-          <Box textAlign="center" py={4}>
-            <Text>Loading more collections...</Text>
-          </Box>
-        )}
-      </VStack>
+              {collections.length === 0 && !loading ? (
+                <Box textAlign="center" py={10}>
+                  <Text fontSize="lg" color="gray.500">
+                    No collections yet. Create your first collection to organize your media!
+                  </Text>
+                </Box>
+              ) : (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {collections.map(collection => (
+                    <CollectionCard
+                      key={collection.id}
+                      collection={collection}
+                      onUpdate={(updatedCollection) => {
+                        setCollections(prev =>
+                          prev.map(c =>
+                            c.id === updatedCollection.id ? updatedCollection : c
+                          )
+                        )
+                      }}
+                      onDelete={(deletedId) => {
+                        setCollections(prev =>
+                          prev.filter(c => c.id !== deletedId)
+                        )
+                      }}
+                    />
+                  ))}
+                </SimpleGrid>
+              )}
+
+              {loading && (
+                <Box textAlign="center" py={4}>
+                  <Text>Loading more collections...</Text>
+                </Box>
+              )}
+            </VStack>
+          </TabPanel>
+
+          {/* AI-Organized Photos Panel */}
+          <TabPanel p={0}>
+            <VStack spacing={8} align="stretch">
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Heading size="lg">AI-Organized Photos</Heading>
+              </Box>
+              <OrganizedPhotos />
+            </VStack>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
       <CreateCollectionModal
         isOpen={isOpen}

@@ -11,9 +11,10 @@ import { useState, useRef } from 'react'
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { updateProfile } from 'firebase/auth'
 import { useAuth } from '../../context/AuthContext'
+import { auth } from '../../services/firebase'
 
 const ProfilePhotoUpload = () => {
-  const { currentUser } = useAuth()
+  const { currentUser, updateUserProfile } = useAuth()
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
   const toast = useToast()
@@ -39,7 +40,7 @@ const ProfilePhotoUpload = () => {
       await uploadBytes(storageRef, file)
       
       const photoURL = await getDownloadURL(storageRef)
-      await updateProfile(currentUser, { photoURL })
+      await updateUserProfile({ photoURL })
 
       toast({
         title: 'Profile photo updated',
