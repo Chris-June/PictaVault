@@ -216,7 +216,16 @@ const ImageAnalysisModal = ({ isOpen, onClose, imageUrl, imageId }) => {
 
               <Box>
                 <Text fontWeight="bold" mb={2}>Detailed Analysis</Text>
-                <Text>{analysis}</Text>
+                <VStack align="stretch" spacing={3}>
+                  {analysis && Object.entries(analysis).map(([section, content]) => (
+                    <Box key={section}>
+                      <Text fontWeight="semibold" color="purple.500" fontSize="sm">
+                        {section}
+                      </Text>
+                      <Text ml={2}>{content}</Text>
+                    </Box>
+                  ))}
+                </VStack>
               </Box>
 
               {similarImages.length > 0 && (
