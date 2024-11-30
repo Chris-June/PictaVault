@@ -46,7 +46,16 @@ export const analyzeImage = async (imageUrl, prompt = '') => {
           content: [
             { 
               type: "text", 
-              text: prompt || "Analyze this image in detail. Describe the scene, objects, people, activities, emotions, and any notable elements." 
+              text: prompt || `Analyze this image and provide a structured response in the following format:
+
+Scene: [Brief description of the overall scene]
+Main Elements: [Key objects, people, or focal points]
+Action/Activity: [What's happening in the image]
+Mood/Atmosphere: [The emotional tone or ambiance]
+Colors & Lighting: [Description of the color palette and lighting]
+Notable Details: [Any interesting or unique details]
+
+Please provide the analysis in exactly this format with these headings.`
             },
             {
               type: "image_url",
@@ -63,7 +72,18 @@ export const analyzeImage = async (imageUrl, prompt = '') => {
       throw new Error('Invalid response format from OpenAI API');
     }
 
-    return response.choices[0].message.content;
+    // Parse the structured response
+    const analysisText = response.choices[0].message.content;
+    const sections = {};
+    
+    const sectionRegex = /^([^:]+):\s*(.+)$/gm;
+    let match;
+    
+    while ((match = sectionRegex.exec(analysisText)) !== null) {
+      sections[match[1].trim()] = match[2].trim();
+    }
+
+    return sections;
   } catch (error) {
     console.error('Error analyzing image:', error);
     if (error.message.includes('API key')) {
@@ -77,8 +97,32 @@ export const analyzeImage = async (imageUrl, prompt = '') => {
 
 export const generateImageTags = async (imageUrl) => {
   try {
-    const analysis = await analyzeImage(imageUrl, 'Generate relevant tags for this image. Focus on objects, scenes, activities, emotions, and style. Return only the tags separated by commas, without any additional text or explanation.');
-    return analysis.split(',').map(tag => tag.trim());
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { 
+              type: "text", 
+              text: "Generate relevant tags for this image. Focus on objects, scenes, activities, emotions, and style. Return only the tags separated by commas, without any additional text or explanation."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!response.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
+
+    return response.choices[0].message.content.split(',').map(tag => tag.trim());
   } catch (error) {
     console.error('Error generating tags:', error);
     throw error;
