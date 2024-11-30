@@ -39,7 +39,7 @@ async function getImageAsBase64(url) {
 export const analyzeImage = async (imageUrl, prompt = '') => {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "user",
@@ -77,7 +77,7 @@ export const analyzeImage = async (imageUrl, prompt = '') => {
 
 export const generateImageTags = async (imageUrl) => {
   try {
-    const analysis = await analyzeImage(imageUrl, 'Generate relevant tags for this image. Return them as a comma-separated list.');
+    const analysis = await analyzeImage(imageUrl, 'Generate relevant tags for this image. Focus on objects, scenes, activities, emotions, and style. Return only the tags separated by commas, without any additional text or explanation.');
     return analysis.split(',').map(tag => tag.trim());
   } catch (error) {
     console.error('Error generating tags:', error);
@@ -101,7 +101,29 @@ export const saveImageAnalysis = async (imageId, analysis) => {
 
 export const generateImageCaption = async (imageUrl) => {
   try {
-    return await analyzeImage(imageUrl, 'Generate a concise, engaging caption for this image.');
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Generate a creative and engaging caption for this image. Make it concise but descriptive." },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!response.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
+
+    return response.choices[0].message.content;
   } catch (error) {
     console.error('Error generating caption:', error);
     throw error;
@@ -110,8 +132,29 @@ export const generateImageCaption = async (imageUrl) => {
 
 export const suggestCollections = async (imageUrl) => {
   try {
-    const suggestions = await analyzeImage(imageUrl, 'Suggest appropriate collection names for this image based on its content. Return them as a comma-separated list.');
-    return suggestions.split(',').map(suggestion => suggestion.trim());
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Suggest 3-5 collection names that this image could belong to. Consider the theme, style, and content of the image. Return only the collection names separated by commas, without any additional text." },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!response.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
+
+    return response.choices[0].message.content.split(',').map(suggestion => suggestion.trim());
   } catch (error) {
     console.error('Error suggesting collections:', error);
     throw error;
